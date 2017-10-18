@@ -117,6 +117,7 @@ class modulecreate extends \core\task\scheduled_task {
                 return 4;
             }
         }
+echo ' Catsites done<br>';
         /* catsites() ->
          *               id
          *               category_name
@@ -153,6 +154,7 @@ class modulecreate extends \core\task\scheduled_task {
                 return 4;
             }
         }
+echo ' Enrols done<br>';
         /* enrolledcourses() ->
          *                       course_idnumber
          *                       course_fullname
@@ -164,16 +166,13 @@ class modulecreate extends \core\task\scheduled_task {
         /* Staff Sandbox Pages.
          * -------------------- */
         // Find id of the staff_SB category. If there isn't one then bypass whole section.
-        $sandboxes = array();
-        if ($DB->get_record('course_categories', array('idnumber' => 'staff_SB'))) {
-            $sbcategory = $DB->get_record('course_categories',
-                        array('idnumber' => 'staff_SB'));
-
-            // Array of staff user data.
-            $sourcetable2 = 'user'; // No data definition as this is a standard mdl table.
-            $select = "email LIKE '%@glos.ac.uk'"; // Pattern match for staff email accounts.
-            $sandboxes = $DB->get_records_select($sourcetable2, $select);
-        }
+        $sbcategory = $DB->record_exists('course_categories', array('idnumber' => 'staff_SB'));
+        // Array of staff user data.
+        $select = "SELECT * FROM {user} WHERE email LIKE '%@glos.ac.uk'"; // Pattern match for staff email accounts.
+        $sandboxes = $DB->get_records_sql($select);
+//        $sbcategory->close();
+//        $sandboxes->close();
+echo ' Sandboxes done3<br>';
         /* sandboxes() ->
          *                       * FROM mdl_user
          *                       idnumber
@@ -186,10 +185,11 @@ class modulecreate extends \core\task\scheduled_task {
 
         $newsite = array();
         $sites = array();
+        $category = new stdClass;
         // Loop through categories array to create course site details for each category.
         foreach ($catsites as $page) {
             $pageidnumber = 'CRS-' . $page['category_idnumber'];
-            if (!$DB->get_records('course',
+            if (!$DB->record_exists('course',
                 array('idnumber' => $pageidnumber))) { // Only add if doesn't already exist in mdl_course.
                 $newsite['fullname'] = $page['category_name'];
                 // Category sites do not have both shortname and idnumber so use category idnumber for both.
@@ -203,6 +203,8 @@ class modulecreate extends \core\task\scheduled_task {
             }
             $sites[] = $newsite;
         }
+echo ' Catsites prepped and added<br>';
+
         // Loop through taughtmodules array to create course site details for each category.
         foreach ($enrolledcourses as $page) {
             $pageidnumber = $page['course_idnumber'];
@@ -218,13 +220,13 @@ class modulecreate extends \core\task\scheduled_task {
             }
             $sites[] = $newsite;
         }
+echo ' Enrol sites prepped and added<br>';
+
         // Loop through staff sandbox array to create course site details for each category.
         // Find id of the staff_SB category. If there isn't one then bypass whole section.
-        if ($DB->get_record('course_categories', array('idnumber' => 'staff_SB'))) {
-            $sbcategory = $DB->get_record('course_categories',
-                        array('idnumber' => 'staff_SB'));
-            foreach ($sandboxes as $page) {
-                $pageidnumber = $page['idnumber'];
+        foreach ($sandboxes as $page) {
+            if ($page->idnumber) {
+                $pageidnumber = $page->idnumber;
                 if (!$DB->get_records('course',
                     array('idnumber' => $pageidnumber))) { // Only add if doesn't already exist.
                     $newsite['fullname'] = $pageidnumber . " Sandbox Test Page";
@@ -235,13 +237,16 @@ class modulecreate extends \core\task\scheduled_task {
                 $sites[] = $newsite;
             }
         }
-
+echo ' Sandbox sites prepped and added<br>';
+print_r($sites);
         /* Write $sites[] to external database table.
          * ========================================== */
         // Get external table to write to.
         if ($this->get_config('remotetablewrite')) {
             $writetable = $this->get_config('remotetablewrite');
             foreach ($sites as $ns) {
+                echo '-----------=====================--------------';
+                print_r($ns);
                 $fullname = $ns['fullname'];
                 $shortname = $ns['shortname'];
                 $idnumber = $ns['idnumber'];

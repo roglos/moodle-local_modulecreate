@@ -136,7 +136,7 @@ echo ' Catsites done<br>';
             $coursetable = $this->get_config('remotetablecourses');
 
             // Read data from table.
-            $sql = "SELECT * FROM " . $coursetable . " WHERE course_idnumber IN
+            $sql = "SELECT * FROM " . $coursetable . " WHERE course_idnumber LIKE '%18/19' AND course_idnumber IN
                 (SELECT distinct course FROM " . $enrolstable .")";
             if ($enrcrsrs = $extdb->Execute($sql)) {
                 if (!$enrcrsrs->EOF) {
